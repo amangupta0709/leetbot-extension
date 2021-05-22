@@ -1,19 +1,55 @@
-// If your extension doesn't need a content script, just leave this file empty
+import axios from 'axios'
 
-// This is an example of a script that will run on every page. This can alter pages
-// Don't forget to change `matches` in manifest.json if you want to only change specific webpages
-printAllPageLinks()
+getPageData()
 
 // This needs to be an export due to typescript implementation limitation of needing '--isolatedModules' tsconfig
-export function printAllPageLinks() {
-  const allLinks = Array.from(document.querySelectorAll('a')).map(
-    (link) => link.href
-  )
+export function getPageData() {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.message === 'upload') {
+      const data: any = {
+        question: document.querySelector('.css-v3d350')!.textContent,
+        url: document.URL,
+        tags: [...document.querySelectorAll('.tag__24Rd')]
+          .map((tag) => {
+            return tag.textContent
+          })
+          .join(', '),
+        code: [...document.querySelectorAll('.CodeMirror-line')]
+          .map((line) => {
+            return line.textContent
+          })
+          .join('\n'),
+      }
 
-  console.log('-'.repeat(30))
-  console.log(
-    `These are all ${allLinks.length} links on the current page that have been printed by the Sample Create React Extension`
-  )
-  console.log(allLinks)
-  console.log('-'.repeat(30))
+      if (document.querySelector('.css-14oi08n')) {
+        data.difficulty = 'Easy'
+      } else if (document.querySelector('.css-dcmtd5')) {
+        data.difficulty = 'Medium'
+      } else if (document.querySelector('.css-t42afm')) {
+        data.difficulty = 'Hard'
+      }
+
+      axios
+        .get('https://leetcode.com/api/problems/algorithms/')
+        .then((res: any) => {
+          if (res.data.user_name === 'aman0709') {
+            data.name = 'Aman Gupta'
+          } else if (res.data.user_name === 'SamarthJain') {
+            data.name = 'Samarth Jain'
+          }
+
+          axios
+            .post('https://leetbot.amangupta0709.repl.co/api/data', data)
+            .then((res) => {
+              console.log(res)
+            })
+            .catch((err) => {
+              console.log(err)
+            })
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+    }
+  })
 }
